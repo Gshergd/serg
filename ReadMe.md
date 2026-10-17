@@ -1,49 +1,91 @@
-# ser.gt.tc
+# serg · GitHub Pages + MongoDB
 
-An owner-only PHP + MySQL link studio, made for InfinityFree. Every generated link is exactly `https://ser.gt.tc/12345`: five digits, no suffix, no extra path, no query parameters. HTTPS is the protocol, not extra characters in the code.
+The dashboard lives at **https://gshergd.github.io/serg/**. Every short link uses **https://ser.gt.tc/12345**, exactly five digits. InfinityFree serves redirects only; opening its root sends visitors to the GitHub dashboard.
 
-Source is public; administration and credentials are private. GitHub stores the code. InfinityFree serves the entire app. This is not a GitHub Pages application and uses no workers, proxy, external API, Composer, npm, or cron.
+```
+GitHub Pages dashboard → Vercel Node API → MongoDB Atlas
+Visitor → ser.gt.tc/12345 → outbound API lookup → destination
+```
 
-## InfinityFree installation
+No Supabase, workers, cross-site requests into InfinityFree, or MongoDB credentials in browser code. The Node API is necessary because browsers cannot safely connect directly to MongoDB.
 
-1. Add `ser.gt.tc` to your hosting account and activate its SSL certificate. Wait until HTTPS works. This app requires HTTPS for owner access.
-2. Create a MySQL database in the hosting control panel. Note its **actual MySQL hostname**, database name, username and password. The hostname is generally not `localhost`.
-3. Open phpMyAdmin, select that database, and import `schema.sql` from this package. It creates three tables without deleting existing data. Use a dedicated database.
-4. Extract `ser-gt-tc-infinityfree.zip` locally. Upload the **contents** of `htdocs/` to the document root assigned to `ser.gt.tc`. Do not create an extra nested `htdocs` folder. Ensure the hidden `.htaccess` file is uploaded. InfinityFree's file manager may require extracting locally and uploading files instead of extracting ZIPs on the host.
-5. On the host, copy `config.example.php` to `config.php`. Enter the database credentials. Replace `setup_key` with your own unique random secret of at least 32 characters (a password manager can generate it). Keep this file and key private. The ZIP intentionally contains no real credentials or default owner password.
-6. Visit `https://ser.gt.tc/setup`. Enter that setup key and choose your owner password (14–72 bytes; ASCII characters make this simple). The first successful setup creates the **only** owner account and permanently closes registration. Save the owner password in your password manager.
-7. Create a link, copy it, and test it in a separate browser. Confirm that its address has exactly five digits. Open `/admin` in a private window and confirm it asks for your password. Test Pause and Resume too.
+Publish these new source changes to GitHub first (commit/push), so Vercel can import the new `backend` directory. The source changes have not been committed or pushed automatically. Leaving the API address blank during this first publish is safe: login stays disabled until configured.
 
-Never upload the whole Git repo, `.git`, `.vs`, tests, or development tools. The supplied ZIP already separates the upload files from documentation and schema. Do not publish `config.php`, the setup key or your password in GitHub issues, screenshots or commits.
+## 1. MongoDB Atlas
 
-## Everyday use
+Create an Atlas project and cluster. Under Database Access create a dedicated database user with read/write access **only to the `serg` database**. Copy its Node.js connection string. URL-encode special characters in its username/password. Keep this URI private.
 
-- Sign in at `/` or `/admin`. There is no public link creation or sign-up.
-- Enter a full HTTP(S) destination and optionally a label. Codes are cryptographically randomly selected five-digit strings, including leading zeros (`00000`–`99999`). They are stored as text and cannot exceed five digits.
-- Copy, search, pause or resume your links. Paused links return HTTP 410; unknown codes return 404. Codes stay reserved so old shared URLs never silently become someone else's destination.
-- Redirects use HTTP 302 and no-store caching, so pausing works without permanent redirect caching. Counts represent GET redirect requests, not unique humans. Bots may increment them.
-- Sessions expire after 30 minutes without owner activity. Sign out on shared computers.
-- The finite namespace supports **100,000 lifetime codes**. It fails safely at capacity instead of generating longer links.
-- Five digits are guessable. Do not use shortened URLs as access control for private documents.
+Under Network Access allow the outbound IPs of your API host. Standard Vercel deployments may not have fixed outbound IPs; if you choose Atlas's Allow Access from Anywhere option, use a strong unique database password and the restricted database user above. For a restricted IP allowlist, use static egress on your hosting plan. The database still requires TLS and authentication. Do not paste the URI into config.js.
 
-## InfinityFree limitations
+## 2. Deploy the API to Vercel
 
-The host's mandatory browser verification can add `?i=1` or another challenge parameter before your PHP code executes. The application never generates those parameters and cannot guarantee that the host will keep the address bare during verification. If absolutely no added parameter at any point is mandatory, InfinityFree free hosting cannot guarantee that requirement. Bots, preview crawlers and cross-domain API calls may be blocked. No bypass is included.
+Import this GitHub repo as a Vercel project. Set **Root Directory to `backend`**, Framework Preset to Other, and use Node 22.x. No custom build command is needed. The endpoint is `/api/handler`.
 
-InfinityFree's administrator has previously warned that infrastructure provider iFastNet may suspend URL shorteners. Owner-only creation reduces abuse but does not guarantee permission. Confirm your intended use with the host before relying on these links long term.
+On your computer, install Node.js 22, open a terminal inside `backend`, and run `npm ci`. Run `npm run hash-password` and type a strong owner password when prompted; input is hidden. Save the printed `OWNER_PASSWORD_HASH`. Run `npm run generate-secret` and save the generated resolver secret. The owner password itself is never stored in the source or database.
 
-References: [browser security restrictions](https://forum.infinityfree.com/t/browser-security-system-features-and-limitations/49353), [shortener policy discussion](https://forum.infinityfree.com/t/can-i-use-infinityfree-as-url-shortener/31273).
+Add these Vercel environment variables (Production):
 
-## Security and recovery
+| Name | Value |
+| --- | --- |
+| `MONGODB_URI` | Private Atlas connection string |
+| `MONGODB_DB` | `serg` |
+| `OWNER_PASSWORD_HASH` | The generated `scrypt:…` hash |
+| `RESOLVER_SECRET` | The generated 64-character hex secret |
+| `FRONTEND_ORIGIN` | `https://gshergd.github.io` (no `/serg` path) |
 
-PDO prepared statements, hashed passwords, secure HttpOnly SameSite cookies, CSRF tokens, DB-backed per-IP attempt limits (10 attempts / 15 minutes), session regeneration, protected configuration files and output escaping are included. URL validation allows only HTTP(S), rejects credentials/control characters, and blocks this domain to avoid direct self-redirect loops. Destinations are redirected to, never fetched by the server.
+Redeploy after changing environment variables. Visit `https://YOUR_BACKEND.vercel.app/api/handler?action=health` and confirm a JSON response with `ok: true`. Health checks do not verify the MongoDB connection; a successful dashboard login does.
 
-If you forget your owner password, use phpMyAdmin to delete only the row with `id=1` from `settings`, rotate `setup_key` in your private configuration, then immediately repeat `/setup`. Existing links remain. Anyone with the setup key could claim ownership while that row is absent. Protect your hosting account.
+Vercel deployment protection must permit public access to this production endpoint. Application authentication protects owner operations, and the resolver secret protects lookups. Preview deployment URLs with a hosting login screen will not work as the backend.
 
-Back up the MySQL database and your private config separately. The public repo and deployment ZIP do not contain your live link data. For updates, preserve config.php and the database; do not rerun first-time owner setup.
+## 3. GitHub Pages dashboard
 
-## Local development
+Set `apiBaseUrl` in the root `config.js` to your production Vercel URL, e.g. `https://serg-api.vercel.app` (no `/api` suffix). This API address is public and safe to commit. No password hash, MongoDB URI, resolver secret, or session token belongs here.
 
-Requires PHP 8.1+ with PDO MySQL and MySQL/MariaDB. Import schema.sql, copy the config example privately and fill local database settings. Run `php -S 127.0.0.1:8080 dev-router.php`. The router is for local development only; the ZIP uses Apache rewrite rules. Loopback requests allow HTTP for development. Production requires HTTPS.
+Keep Pages publishing from the repository root as you already configured. The root `index.html`, relative asset paths and `.nojekyll` work under `/serg/`. Commit/push your changes to publish when ready. If you use an existing custom Pages workflow instead of branch publishing, its output must include index.html, config.js and assets/. No new workflow has been added.
 
-Run `php tests/validation.php` for destination validation, and `php -l filename.php` for syntax checks. `tests/capacity.php` exercises all 100,000 slots against a disposable local MariaDB database only; read its guard before running it. Local HTTP testing does not reproduce InfinityFree's browser challenge or verify its live Apache configuration.
+Open https://gshergd.github.io/serg/ and sign in with your owner password. Only this owner password can create sessions. There is no sign-up, no user-registration endpoint, and no public write access.
+
+## 4. InfinityFree redirect-only upload
+
+Download `ser-gt-tc-infinityfree.zip`, extract locally, and upload the **contents** of `htdocs/` to the document root assigned to ser.gt.tc, including `.htaccess`.
+
+**Updating the old version:** remove its app.php, view.php, assets directory, config.example.php and any old setup/admin PHP files from that domain's document root. Replace index.php and .htaccess with these versions. Replace the old config.php entirely with a copy of the new config.example.php, then fill the values below. This is a different configuration format; old MySQL settings will not work. Back up old files/data first if needed. No old dashboard should remain on this host. Existing v1 MySQL links are not imported automatically into MongoDB.
+
+Edit the new private config.php on InfinityFree:
+
+```php
+return [
+    'api_base_url' => 'https://YOUR_BACKEND.vercel.app',
+    'resolver_secret' => 'THE_SAME_RESOLVER_SECRET_AS_VERCEL',
+];
+```
+
+Activate HTTPS for ser.gt.tc. No MySQL database, owner password, setup page or dashboard is needed on InfinityFree. PHP cURL with outbound HTTPS is required; certificate verification stays enabled. The upload ZIP intentionally contains no real config.php or secrets.
+
+## Verify the complete deployment
+
+1. Sign in at GitHub Pages and create a link. The displayed address must be `https://ser.gt.tc/` followed by exactly five digits.
+2. Open that link in a different browser. Confirm it reaches the destination.
+3. Pause it in the dashboard, then reload the short URL. It must return HTTP 410. Resume and retry.
+4. Open the dashboard in a private window. It must ask for the owner password.
+5. Open https://ser.gt.tc/. It must send you to GitHub Pages with no InfinityFree dashboard.
+
+## Behavior and security
+
+Codes run from `00000` through `99999`. MongoDB's unique `_id` reserves each code atomically; collisions retry, and near capacity the allocator finds a free slot. Paused codes stay reserved. At 100,000 it fails instead of generating a longer link. Five digits are guessable; shortened URLs are not access control for private documents.
+
+Links can be copied, searched, paused and resumed. Labels are rendered as text. Destinations allow HTTP(S), forbid credentials/control characters/backslashes, and reject direct self-redirects to ser.gt.tc. Redirects use HTTP 302 with no-store caching. Counts are redirect GET requests, not unique humans; HEAD requests do not increment them.
+
+Owner passwords use salted scrypt hashes. Random owner-session tokens are stored hashed in MongoDB, expire after one hour, and are kept in browser sessionStorage, not the repo. Logout revokes the current token. Login attempts are limited per client IP to 10 per 15-minute window using shared database state. Rotating the owner password hash does not revoke existing sessions by itself: delete the `sessions` collection's documents in Atlas to revoke all sessions immediately. TTL indexes clean expired sessions and attempt records; expiration is also checked on every protected request.
+
+InfinityFree holds only the lookup secret; the API rejects unauthenticated lookups. Browser requests use an exact allowed Origin and bearer authentication. The backend's secrets live only in its environment. Back up MongoDB separately; repo/ZIP files contain no live links.
+
+InfinityFree's mandatory browser check can still inject `?i=1`, delay redirects or block preview bots. Generated URLs have exactly five digits, but the host controls its challenge. Its shortener policy and suspension risk still apply. MongoDB/API outages or cold starts can delay redirects; the PHP endpoint fails with 503 instead of sending visitors to an unvalidated address. This ZIP cannot remove the host's security check.
+
+References: [InfinityFree restrictions](https://forum.infinityfree.com/t/browser-security-system-features-and-limitations/49353), [shortener policy](https://forum.infinityfree.com/t/can-i-use-infinityfree-as-url-shortener/31273), [MongoDB Node client](https://www.mongodb.com/docs/drivers/node/current/connect/mongoclient/), [Vercel Node runtime](https://vercel.com/docs/functions/runtimes/node-js).
+
+## Development and tests
+
+API: create backend/.env privately from .env.example and run `node --env-file=.env dev.mjs` from backend. Serve the repo root with any static server. For local browser testing set FRONTEND_ORIGIN to the exact local static origin and set config.js temporarily to http://127.0.0.1:8787; restore production settings before publishing. No local HTTP option is shipped in the production InfinityFree resolver.
+
+`npm test` checks password verification and URL validation. The integration suite in backend/tests/integration.mjs requires a disposable local MongoDB URI and exercises API authorization, sessions, links and capacity; see its environment guard. PHP lint checks use `php -l infinityfree/index.php` and `php -l infinityfree/resolver.php`.

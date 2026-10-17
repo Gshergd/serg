@@ -1,0 +1,7 @@
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+RewriteEngine On
+RewriteRule ^(?:config(?:\.example)?\.php|resolver\.php|\.git(?:/|$)) - [F,L,NC]
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://ser.gt.tc%{REQUEST_URI} [R=302,L,NE]
+RewriteRule ^[0-9]{5}$ index.php [END]

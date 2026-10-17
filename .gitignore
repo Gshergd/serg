@@ -1,3 +1,8 @@
 .vs/
-config.php
+node_modules/
+.env
+.env.*
+!.env.example
+.vercel/
+infinityfree/config.php
 *.zip

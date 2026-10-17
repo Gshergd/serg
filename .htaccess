@@ -1,9 +1,0 @@
-Options -Indexes -MultiViews
-DirectoryIndex index.php
-RewriteEngine On
-# Secrets and internal application files are never web endpoints.
-RewriteRule ^(?:config(?:\.example)?\.php|app\.php|view\.php|schema\.sql|ReadMe\.md|tests(?:/|$)|\.git(?:/|$)) - [F,L,NC]
-RewriteCond %{HTTPS} !=on
-RewriteRule ^ https://ser.gt.tc%{REQUEST_URI} [R=302,L,NE]
-RewriteRule ^[0-9]{5}$ index.php [END]
-RewriteRule ^(?:admin|login|setup)/?$ index.php [END]
