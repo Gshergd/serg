@@ -6,7 +6,7 @@ header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
 $path=parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH);
 if($path==='/'||$path==='/index.php'){header('Location: https://gshergd.github.io/serg/',true,302);exit;}
 if(!in_array($_SERVER['REQUEST_METHOD'],['GET','HEAD'],true)){http_response_code(405);header('Allow: GET, HEAD');exit('Method not allowed.');}
-if(!is_string($path)||!preg_match('~^/[0-9]{5}$~D',$path)){http_response_code(404);exit('Unknown short link.');}
+if(!is_string($path)||!preg_match('~^/[A-Za-z0-9]{5}$~D',$path)){http_response_code(404);exit('Unknown short link.');}
 try{
     require __DIR__.'/resolver.php';
     if(!is_file(__DIR__.'/config.php'))throw new RuntimeException('Configuration missing');
