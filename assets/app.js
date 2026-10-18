@@ -57,7 +57,7 @@ async function loadLinks() {
   if(version!==loadVersion)return;
   page=result.page; pages=result.pages; $('total').textContent=result.total.toLocaleString(); $('clicks').textContent=result.clicks.toLocaleString()+' redirect requests';
   $('links').replaceChildren();
-  if(!result.links.length){ const empty=element('div','empty'); empty.append(element('span','','↗'),element('h3','',$('q').value?'Nothing here by that name.':'Your first shortcut starts above.'),element('p','','Paste a destination. We’ll take care of the five digits.')); $('links').append(empty); }
+  if(!result.links.length){ const empty=element('div','empty'); empty.append(element('span','','↗'),element('h3','',$('q').value?'Nothing here by that name.':'Your first shortcut starts above.'),element('p','','Paste a destination. We’ll take care of the five characters.')); $('links').append(empty); }
   else result.links.forEach(row=>$('links').append(renderLink(row)));
   $('prev').hidden=page<=1; $('next').hidden=page>=pages; $('page-label').textContent=pages>1?`${page} / ${pages}`:'';
 }
