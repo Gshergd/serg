@@ -1,10 +1,10 @@
 # serg · GitHub Pages + MongoDB
 
-The dashboard lives at **https://gshergd.github.io/serg/**. Every short link uses **https://ser.gt.tc/12345**, exactly five digits. InfinityFree serves redirects only; opening its root sends visitors to the GitHub dashboard.
+The dashboard lives at **https://gshergd.github.io/serg/**. Every short link uses **https://ser.gt.tc/a7B2x**, exactly five characters. InfinityFree serves redirects only; opening its root sends visitors to the GitHub dashboard.
 
 ```
 GitHub Pages dashboard → Vercel Node API → MongoDB Atlas
-Visitor → ser.gt.tc/12345 → outbound API lookup → destination
+Visitor → ser.gt.tc/a7B2x → outbound API lookup → destination
 ```
 
 No Supabase, workers, cross-site requests into InfinityFree, or MongoDB credentials in browser code. The Node API is necessary because browsers cannot safely connect directly to MongoDB.
@@ -64,7 +64,7 @@ Activate HTTPS for ser.gt.tc. No MySQL database, owner password, setup page or d
 
 ## Verify the complete deployment
 
-1. Sign in at GitHub Pages and create a link. The displayed address must be `https://ser.gt.tc/` followed by exactly five digits.
+1. Sign in at GitHub Pages and create a link. The displayed address must be `https://ser.gt.tc/` followed by exactly five characters.
 2. Open that link in a different browser. Confirm it reaches the destination.
 3. Pause it in the dashboard, then reload the short URL. It must return HTTP 410. Resume and retry.
 4. Open the dashboard in a private window. It must ask for the owner password.
@@ -72,7 +72,7 @@ Activate HTTPS for ser.gt.tc. No MySQL database, owner password, setup page or d
 
 ## Behavior and security
 
-Codes run from `00000` through `99999`. MongoDB's unique `_id` reserves each code atomically; collisions retry, and near capacity the allocator finds a free slot. Paused codes stay reserved. At 100,000 it fails instead of generating a longer link. Five digits are guessable; shortened URLs are not access control for private documents.
+Codes use exactly five case-sensitive letters and numbers (`0–9`, `a–z`, `A–Z`), allowing 916,132,832 combinations. MongoDB's unique `_id` reserves codes atomically and collisions retry. Paused codes stay reserved. Existing numeric links continue working. Short URLs are not access control for private documents.
 
 Links can be copied, searched, paused and resumed. Labels are rendered as text. Destinations allow HTTP(S), forbid credentials/control characters/backslashes, and reject direct self-redirects to ser.gt.tc. Redirects use HTTP 302 with no-store caching. Counts are redirect GET requests, not unique humans; HEAD requests do not increment them.
 
@@ -80,7 +80,7 @@ Owner passwords use salted scrypt hashes. Random owner-session tokens are stored
 
 InfinityFree holds only the lookup secret; the API rejects unauthenticated lookups. Browser requests use an exact allowed Origin and bearer authentication. The backend's secrets live only in its environment. Back up MongoDB separately; repo/ZIP files contain no live links.
 
-InfinityFree's mandatory browser check can still inject `?i=1`, delay redirects or block preview bots. Generated URLs have exactly five digits, but the host controls its challenge. Its shortener policy and suspension risk still apply. MongoDB/API outages or cold starts can delay redirects; the PHP endpoint fails with 503 instead of sending visitors to an unvalidated address. This ZIP cannot remove the host's security check.
+InfinityFree's mandatory browser check can still inject `?i=1`, delay redirects or block preview bots. Generated URLs have exactly five characters, but the host controls its challenge. Its shortener policy and suspension risk still apply. MongoDB/API outages or cold starts can delay redirects; the PHP endpoint fails with 503 instead of sending visitors to an unvalidated address. This ZIP cannot remove the host's security check.
 
 References: [InfinityFree restrictions](https://forum.infinityfree.com/t/browser-security-system-features-and-limitations/49353), [shortener policy](https://forum.infinityfree.com/t/can-i-use-infinityfree-as-url-shortener/31273), [MongoDB Node client](https://www.mongodb.com/docs/drivers/node/current/connect/mongoclient/), [Vercel Node runtime](https://vercel.com/docs/functions/runtimes/node-js).
 
