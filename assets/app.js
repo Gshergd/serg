@@ -48,7 +48,19 @@ function renderLink(row) {
   const actions=element('div','link-actions'), copy=element('button','copy','Copy ↗'); copy.setAttribute('aria-label','Copy link '+row.code); copy.addEventListener('click',()=>copyLink(url,copy));
   const toggle=element('button','text-button',row.active?'Pause':'Resume'); toggle.setAttribute('aria-label',(row.active?'Pause ':'Resume ')+row.code);
   toggle.addEventListener('click',async()=>{ toggle.disabled=true; try{ await api('toggle',{code:row.code,active:!row.active}); await loadLinks(); } catch(error){showMessage(error.message,true);}finally{toggle.disabled=false;} });
-  actions.append(copy,toggle); article.append(main,meta,actions); return article;
+  const remove=element('button','text-button delete-button','Delete'); remove.setAttribute('aria-label','Delete '+row.code); remove.addEventListener('click',()=>confirmDeletion(row,remove));
+  actions.append(copy,toggle,remove); article.append(main,meta,actions); return article;
+}
+function confirmDeletion(row,button) {
+  const dialog=$('delete-dialog'); $('delete-code').textContent='ser.gt.tc/'+row.code;
+  dialog.returnValue='cancel'; dialog.showModal();
+  dialog.addEventListener('close',async()=>{
+    if(dialog.returnValue!=='delete')return;
+    button.disabled=true;
+    try { await api('delete',{code:row.code}); await loadLinks(); showMessage('Deleted ser.gt.tc/'+row.code+'. This redirect is permanently removed.'); }
+    catch(error){showMessage(error.message,true);}
+    finally{button.disabled=false;}
+  },{once:true});
 }
 let loadVersion=0;
 async function loadLinks() {
