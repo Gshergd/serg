@@ -1,9 +1,9 @@
 # serg · Private link studio
 
-Dashboard: **https://gshergd.github.io/serg/**  
+Dashboard: **https://gshergd.github.io/serg/**
 Short links: **https://ser.gt.tc/JzQN0** (five case-sensitive letters/numbers)
 
-The deployment is connected and verified. Sign in to the dashboard with your owner password to create, copy, search, pause or resume links. There is no public sign-up.
+The deployment is connected and verified. Sign in to the dashboard with your owner password to create, copy, search, pause, resume or permanently delete links. There is no public sign-up.
 
 ## How the three services connect
 
@@ -31,3 +31,5 @@ Codes use exactly five characters from `0–9`, `a–z`, `A–Z`: 916,132,832 po
 The live dashboard created `https://ser.gt.tc/JzQN0`, which redirected successfully to its destination. Owner login, listing and redirect counts were checked. Unit tests, PHP syntax validation and disposable local MongoDB integration passed, including authentication, CORS, session expiry/logout, pause/resume, literal search, rate limits, old numeric links and concurrent code allocation.
 
 Redirects use HTTP 302 with no-store caching. Counts measure GET requests; HEAD does not increment them. Owner sessions expire after one hour. Short URLs are public and should not be used to protect private documents. InfinityFree controls its browser challenge, which can affect previews or add a temporary query string despite the generated code staying five characters.
+
+Permanent deletion removes the destination, label and click history. Only the short-code reservation and deletion date remain, preventing an old shared URL from being reassigned. Deleted redirects return 404 and cannot be resumed.
